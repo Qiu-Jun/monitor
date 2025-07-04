@@ -1,0 +1,32 @@
+{
+  "name": "monitor",
+  "version": "1.0.0",
+  "description": "> 前端监控，用于捕获，分析，和报告网站或应用程序中的异常，错误和性能问题的方法",
+  "main": "./dist/monitor-june.umd.js",
+  "module": "./dist/monitor-june.es.js",
+  "exports": {
+    ".": {
+      "require": "./dist/monitor-june.umd.js",
+      "import": "./dist/monitor-june.es.js"
+    },
+    "./dist/style.css": "./dist/monitor-june.css"
+  },
+  "scripts": {
+    "preinstall": "npx only-allow pnpm",
+    "build": "vite build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Qiu-Jun/monitor.git"
+  },
+  "author": "June",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Qiu-Jun/monitor/issues"
+  },
+  "homepage": "https://github.com/Qiu-Jun/monitor#readme",
+  "devDependencies": {
+    "terser": "^5.43.1",
+    "vite": "^6.2.0"
+  }
+}
