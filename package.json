@@ -1,5 +1,5 @@
 {
-  "name": "monitor",
+  "name": "@june/monitor",
   "version": "1.0.0",
   "description": "> 前端监控，用于捕获，分析，和报告网站或应用程序中的异常，错误和性能问题的方法",
   "main": "./dist/monitor-june.umd.js",
