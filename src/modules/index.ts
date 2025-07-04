@@ -1,0 +1,5 @@
+export { default as onWindowErr } from './err'
+export { default as onLongTask } from './longTask'
+export { default as onPaint }  from './paint'
+export { default as onTiming } from './timing'
+export { default as onXHR } from './xhr'

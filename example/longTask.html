@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>长任务</title>
+  </head>
+  <body>
+    <button id="longTaskBtn">长任务</button>
+    <script type="module">
+      import { Monitor } from "../dist/monitor-june.es.js"
+      const monitor = new Monitor({
+        url: "http://localhost:3000/api/monitor",
+        appId: "appId",
+        userId: "userId",
+        timeoutDuration: 10000,
+        maxQueueSize: 10,
+        sendInterval: 5000,
+      });
+      
+      function longTask() {
+        const start = Date.now();
+        // console.log("longTask开始 start");
+        while (Date.now() < 200 + start) {}
+        // console.log("longTask结束 end", Date.now() - start);
+      }
+      longTaskBtn.addEventListener("click", longTask);
+    </script>
+  </body>
+</html>

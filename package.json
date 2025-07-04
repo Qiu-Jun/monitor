@@ -28,5 +28,8 @@
   "devDependencies": {
     "terser": "^5.43.1",
     "vite": "^6.2.0"
+  },
+  "dependencies": {
+    "ua-parser-js": "^2.0.4"
   }
 }

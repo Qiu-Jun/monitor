@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  </head>
+  <body>
+    <div id="container">
+      <!-- <input type="button" value="点击抛出 Promise 错误" onclick="promiseErrorClick()" /> -->
+
+      <button id="test">测试</button>
+    </div>
+
+    <script type="module">
+      import { Monitor } from "../dist/monitor-june.es.js"
+      const monitor = new Monitor({
+        url: "http://localhost:3000/api/monitor",
+        appId: "appId",
+        userId: "userId",
+        timeoutDuration: 10000,
+        maxQueueSize: 10,
+        sendInterval: 5000,
+      });
+
+      document.getElementById("test").addEventListener("click", promiseErrorClick); 
+
+      function promiseErrorClick() {
+        new Promise(function (resolve, reject) {
+          // 抛出错误方式 1：
+          // window.someVal.error = "error";
+          // 抛出错误 2：
+          throw new Error("错误原因：模拟一个 Promise 33333错误。");
+          reject("错误原因：模拟一个 Promise 错误。");
+        });
+        // .catch(err => {
+        //   console.log("err");
+        // });
+      }
+    </script>
+  </body>
+</html>

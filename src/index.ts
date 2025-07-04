@@ -1,6 +1,2 @@
-import Monitor from './monitor'
-import plugin from './plugin'
-
-export * from './types'
-export { Monitor, plugin }
-export default Monitor
+export { default as Monitor } from './monitor'
+export type * from './interface'

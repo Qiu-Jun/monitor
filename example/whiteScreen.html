@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>检测白屏</title>
+  </head>
+  <body>
+    <div id="root">
+      <input type="button" value="点击抛出错误" onclick="errorClick()" />
+      <div id="main" style="width: 100%; height: 500px; background-color: gray"></div>
+    </div>
+
+    <script type="module">
+      import { Monitor } from "../dist/monitor-june.es.js"
+      const monitor = new Monitor({
+        url: "http://localhost:3000/api/monitor",
+        appId: "appId",
+        userId: "userId",
+        timeoutDuration: 10000,
+        maxQueueSize: 10,
+        sendInterval: 5000,
+      });
+      function errorClick() {
+        // 模拟白屏
+        document.getElementById("main").remove();
+
+        // 模拟代码错误：访问一个未定义的对象的属性
+        window.someVal.error = "error";
+      }
+    </script>
+  </body>
+</html>
