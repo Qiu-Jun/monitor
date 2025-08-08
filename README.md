@@ -47,7 +47,7 @@ window.addEventListener("error", (event) => {
    > 框架提供一键上报异常的方法，可以上报自定义异常信息
    > 使用场景如：方法里，try catch 中
 
-2. 无恒埋点
+2. 无痕埋点
 
    > 通过全局监听事件，上报异常信息
 

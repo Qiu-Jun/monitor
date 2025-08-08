@@ -45,7 +45,7 @@ export default class Monitor {
       baseLog: baseData,
       ...data,
     };
-    console.log("send log", log);
+    console.log("send log=============================", log);
     // @ts-ignore
     if(this.url && navigator.sendBeacon) {
       const formData = new FormData();
