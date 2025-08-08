@@ -8,8 +8,7 @@
     ".": {
       "require": "./dist/monitor-june.umd.js",
       "import": "./dist/monitor-june.es.js"
-    },
-    "./dist/style.css": "./dist/monitor-june.css"
+    }
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
