@@ -1,0 +1,1 @@
+declare module 'color-gradient-picker-vue3'

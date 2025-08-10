@@ -15,8 +15,8 @@ export default defineConfig({
     },
     lib: {
       entry: './src/index.ts', // 入口文件
-      name: 'monitor-june', // 打包后的库名
-      fileName: (format) => `monitor-june.${format}.js`, // 输出文件名格式
+      name: 'monitor', // 打包后的库名
+      fileName: (format) => `monitor.${format}.js`, // 输出文件名格式
       formats: ['es', 'umd'] // 支持的格式
     },
   }

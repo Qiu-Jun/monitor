@@ -1,15 +1,20 @@
 {
   "name": "@qiu_jun/monitor",
-  "version": "0.0.1",
+  "version": "0.0.6",
   "description": "前端监控，用于捕获，分析，和报告网站或应用程序中的异常，错误和性能问题的方法",
-  "main": "./dist/monitor-june.umd.js",
-  "module": "./dist/monitor-june.es.js",
+  "main": "./dist/monitor.umd.js",
+  "module": "./dist/monitor.es.js",
   "exports": {
     ".": {
-      "require": "./dist/monitor-june.umd.js",
-      "import": "./dist/monitor-june.es.js"
+      "require": "./dist/monitor.umd.js",
+      "import": "./dist/monitor.es.js"
     }
   },
+  "files": [
+    "dist",
+    "index.d.ts",
+    "types"
+  ],
   "scripts": {
     "preinstall": "npx only-allow pnpm",
     "build": "vite build"

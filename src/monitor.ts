@@ -15,6 +15,7 @@ export default class Monitor {
   originalOnerror: OnErrorEventHandler;
 
   constructor(options: IMonitorOptions) {
+    // if (!options.appId) throw new Error('appId is required');
     this.reportUrl = options?.reportUrl || ''
     this.monitorGif = options?.monitorGif || 'http://localhost:8080/send/monitor.gif'
     this.timeoutDuration = options?.timeoutDuration || 10000 // 默认超时时间10秒
@@ -45,13 +46,15 @@ export default class Monitor {
       baseLog: baseData,
       ...data,
     };
-    console.log("send log=============================", log);
+    console.log('上报日志:', log);
     // @ts-ignore
-    if(this.url && navigator.sendBeacon) {
+    if(this.reportUrl && navigator.sendBeacon) {
+      // 如果填了上报地址，并且浏览器支持sendBeacon
       const formData = new FormData();
       formData.append('data', encodeURIComponent(JSON.stringify(log)));
       return navigator.sendBeacon(this.reportUrl, formData);
     } else {
+      // 如果填了gif地址，并且不是批量XHR请求
       if(this.monitorGif && data.type !== 'batchXHR') {
         const img = new window.Image();
         img.src = `${this.monitorGif}?data=${encodeURIComponent(JSON.stringify(log))}`;
