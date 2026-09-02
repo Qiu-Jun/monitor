@@ -1,59 +1,90 @@
-# 监控前端接入依赖包
+# @qiu_jun/monitor
 
-## 定义
+前端监控 SDK：采集异常 + 性能指标，上报至异常分析平台（main-server `/api/exception/report`）。
 
-> 前端监控，用于捕获，分析，和报告网站或应用程序中的异常，错误和性能问题的方法
+内置 reporter（与 main-server `exception-sdk` 协议对齐），**无外部 SDK 依赖**，可独立打包发布 npm。
 
-### 全局错误监控
+## 安装
 
-```js
-window.onerror = function (msg, url, lineNo, columnNo, error) {
-  console.log("异步错误！");
-  console.log("错误描述:" + msg);
-  console.log("报错文件:" + url);
-  console.log("行号:" + lineNo);
-  console.log("列号:" + columnNo);
-  console.log("错误对象:" + error);
-};
+```bash
+pnpm add @qiu_jun/monitor
 ```
 
-`return true` 阻止阻止默认浏览器行为，如异常信息不会在 console 中打印
+## 按需引入（子路径导出）
 
-### promise 错误监控
+与异常平台 SDK 相同风格，按场景引入：
 
-```js
-// 全局监听 unhandledrejection 事件来捕获未被处理的 Promise 错误
-window.addEventListener("unhandledrejection", (event) => {
-  // 捕获未被处理的 Promise 错误
-  console.error(event.reason);
-});
+```ts
+// 完整 H5 监控（采集 + 上报）
+import { Monitor } from '@qiu_jun/monitor'
+import { Monitor } from '@qiu_jun/monitor/h5'
+
+// 仅 reporter（自定义采集，复用上报协议）
+import { createReporter, makeH5Transport } from '@qiu_jun/monitor/reporter'
 ```
 
-### 资源加载错误监控
+## 快速接入
 
-```js
-window.addEventListener("error", (event) => {
-  console.log(event.target.src);
-});
+```ts
+import { Monitor } from '@qiu_jun/monitor'
+
+const monitor = new Monitor({
+  endpoint: 'https://your-host/api/exception/report',
+  projectKey: 'your-project-key',
+  release: '1.0.0',  // 客户端版本号 选填
+  environment: 'production', 
+  userId: 'optional-user-id', // 选填
+})
 ```
 
-和 `window.onerror` 区别在于 `window.addEventListener` 可以监听到所有资源加载错误，包括图片、css、js 等等
-并且无法阻止默认浏览器行为
+配置 `endpoint` + `projectKey` 后，所有采集数据自动转为异常平台格式并批量上报。
 
-## 埋点方式
+**采样率**：仅在后台「接入项目」里配置 `sampleRate`，客户端无需传。
 
-1. 手动埋点
+完整参数说明见 [docs.md](./docs.md)。
 
-   > 框架提供一键上报异常的方法，可以上报自定义异常信息
-   > 使用场景如：方法里，try catch 中
+## 自动采集
 
-2. 无痕埋点
+| 采集项 | 异常平台 type | 说明 |
+|---|---|---|
+| JS 错误 | `error` | 含选择器、白屏检测 |
+| Promise 未捕获 | `unhandledrejection` | |
+| 资源加载失败 | `resource` | img/script/css 等 |
+| XHR 失败/超时 | `request` | message 格式 `Request failed [500]: GET /api/...` |
+| FP/FCP/FMP/LCP | `paint` | 指标在 `device` |
+| DOMContentLoaded/load | `timing` | |
+| 长任务 | `longTask` | duration ≥ 100ms 时 level=WARN |
 
-   > 通过全局监听事件，上报异常信息
+## 手动上报
 
+```ts
+monitor.capture({
+  type: 'custom',
+  level: 'WARN',
+  message: '支付回调超时',
+})
+```
 
-## 性能指标分析
+## 构建发布
 
-1. 报错信息可视化统计，定位，提醒
-2. 用户体验关键指标数据       
-3. 业务相关：pv，uv，页面停留时间
+```bash
+pnpm build   # tsc → dist/*.js + *.d.ts，vite → dist/monitor.umd.js
+npm publish
+```
+
+产物：
+
+| 路径 | 说明 |
+|---|---|
+| `@qiu_jun/monitor` | `dist/index.js` + `dist/index.d.ts` |
+| `@qiu_jun/monitor/h5` | `dist/h5.js` + `dist/h5.d.ts` |
+| `@qiu_jun/monitor/reporter` | `dist/reporter.js` + `dist/reporter.d.ts` |
+| UMD | `dist/monitor.umd.js`（`require` 条件导出） |
+
+## 与 main-server 的关系
+
+- 上报协议对齐 `packages/main-server/src/modules/exception/report/`
+- 异常类 → `exc_issue` + `exc_event`
+- 性能类（paint/timing/longTask）→ `exc_perf_event`
+- reporter 源码位于 `src/exception/`，与 exception-sdk 逻辑等价，便于独立发版
+- **后台对接与展示**：[backend-integration.md](./backend-integration.md)（与 exception 模块 `/api/exception/*` 接口一一对照）

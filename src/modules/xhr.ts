@@ -26,8 +26,11 @@ export default function onXHR() {
         xhr.addEventListener('error', function () {
           const duration = new Date().getTime() - startTime
           const status = xhr.status
+          const urlStr = String(reqUrl ?? '')
 
-          // 记录请求信息
+          if (_this.endpoint && urlStr === _this.endpoint)
+            return
+
           _this.captureRequest({
             type: 'xhr',
             url: reqUrl,
@@ -44,8 +47,11 @@ export default function onXHR() {
         xhr.addEventListener('timeout', function () {
           const duration = new Date().getTime() - startTime
           const status = xhr.status
+          const urlStr = String(reqUrl ?? '')
 
-          // 记录请求信息
+          if (_this.endpoint && urlStr === _this.endpoint)
+            return
+
           _this.captureRequest({
             type: 'xhr',
             url: reqUrl,

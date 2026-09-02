@@ -1,23 +1,35 @@
 {
-  "name": "@qiu_jun/monitor",
-  "version": "0.0.6",
+  "name": "@qiu_jun/monitors",
+  "version": "0.0.1",
   "description": "前端监控，用于捕获，分析，和报告网站或应用程序中的异常，错误和性能问题的方法",
-  "main": "./dist/monitor.umd.js",
-  "module": "./dist/monitor.es.js",
+  "sideEffects": false,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
       "require": "./dist/monitor.umd.js",
-      "import": "./dist/monitor.es.js"
+      "default": "./dist/index.js"
+    },
+    "./h5": {
+      "types": "./dist/h5.d.ts",
+      "default": "./dist/h5.js"
+    },
+    "./reporter": {
+      "types": "./dist/reporter.d.ts",
+      "default": "./dist/reporter.js"
     }
   },
   "files": [
-    "dist",
-    "index.d.ts",
-    "types"
+    "dist"
   ],
   "scripts": {
     "preinstall": "npx only-allow pnpm",
-    "build": "vite build"
+    "build": "pnpm run clean && pnpm run compile && pnpm run bundle",
+    "clean": "rimraf dist",
+    "compile": "tsc -p tsconfig.build.json",
+    "bundle": "vite build"
   },
   "publishConfig": {
     "access": "public",
@@ -34,7 +46,9 @@
   },
   "homepage": "https://github.com/Qiu-Jun/monitor#readme",
   "devDependencies": {
+    "rimraf": "^6.0.1",
     "terser": "^5.43.1",
+    "typescript": "~6.0.3",
     "vite": "^6.2.0"
   },
   "dependencies": {

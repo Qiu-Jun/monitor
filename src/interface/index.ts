@@ -1,12 +1,20 @@
 export interface IMonitorOptions {
-  reportUrl?: string
-  monitorGif?: string
-  appId?: string
+  /** 异常平台上报地址，如 https://host/api/exception/report */
+  endpoint: string
+  /** 接入项目 projectKey（后台「接入项目」创建后获得） */
+  projectKey: string
+  /** 客户端版本号 */
+  release?: string
+  /** 环境 production | development */
+  environment?: string
+  /** reporter 批量阈值，默认 20 */
+  maxBatch?: number
+  /** reporter 定时 flush 间隔 ms，默认 30000（30 秒） */
+  flushInterval?: number
   userId?: string
+  /** XHR 超时阈值 ms，默认 60000（1 分钟） */
   timeoutDuration?: number
   maxQueueSize?: number
-  sendInterval?: number
-  callback?: (data?: any) => void
 }
 
 
@@ -107,6 +115,8 @@ export interface RequestLog {
   status?: number;
   url?: string;
   method?: string;
+  /** 请求发生时页面地址（captureRequest 自动填充） */
+  page?: string;
 }
 export interface BatchRequestLog {
   type: 'batchXHR',
@@ -115,6 +125,3 @@ export interface BatchRequestLog {
 
 // 监控种类日志
 export type MonitorTypeLog = ErrorLog | PaintLog | TimingLog | LongTaskLog | RequestLog | BatchRequestLog;
-
-// 上报监控日志
-export type MonitorLog = { baseLog: BaseLog } & MonitorTypeLog;

@@ -76,7 +76,6 @@ export default function onWindowErr() {
         message = reason.message;
         // 情况 2、是 Promise 中 JS 代码执行出错
         if (reason.stack) {
-          // 从错误信息中匹配到关键信息。stack 示例：at http://localhost:8080/examples/promiseError.html:29:32
           const matchResult = reason.stack.match(/at\s+(.+):(\d+):(\d+)/);
           filename = matchResult[1];
           line = matchResult[2];

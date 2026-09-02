@@ -1,23 +1,31 @@
-import { defineConfig } from "vite";
+import { defineConfig } from 'vite'
+import { resolve } from 'node:path'
 
+/** UMD 单文件（CDN / script 标签）；ESM/CJS 子路径由 tsc 产出 */
 export default defineConfig({
   build: {
     target: 'es2015',
     outDir: 'dist',
+    emptyOutDir: false,
     minify: 'terser',
     sourcemap: false,
     terserOptions: {
       compress: {
-        //生产环境时移除console
         drop_console: true,
         drop_debugger: true,
       },
     },
     lib: {
-      entry: './src/index.ts', // 入口文件
-      name: 'monitor', // 打包后的库名
-      fileName: (format) => `monitor.${format}.js`, // 输出文件名格式
-      formats: ['es', 'umd'] // 支持的格式
+      entry: resolve(__dirname, 'src/index.ts'),
+      name: 'Monitor',
+      formats: ['umd'],
+      fileName: () => 'monitor.umd.js',
     },
-  }
+    rollupOptions: {
+      output: {
+        exports: 'named',
+        globals: {},
+      },
+    },
+  },
 })
