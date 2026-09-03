@@ -1,4 +1,4 @@
-# @qiu_jun/monitor
+# @qiu_jun/monitors(自用)
 
 前端监控 SDK：采集异常 + 性能指标，上报至异常分析平台（main-server `/api/exception/report`）。
 
@@ -7,7 +7,7 @@
 ## 安装
 
 ```bash
-pnpm add @qiu_jun/monitor
+pnpm add @qiu_jun/monitors
 ```
 
 ## 按需引入（子路径导出）
@@ -16,17 +16,17 @@ pnpm add @qiu_jun/monitor
 
 ```ts
 // 完整 H5 监控（采集 + 上报）
-import { Monitor } from '@qiu_jun/monitor'
-import { Monitor } from '@qiu_jun/monitor/h5'
+import { Monitor } from '@qiu_jun/monitors'
+import { Monitor } from '@qiu_jun/monitors/h5'
 
 // 仅 reporter（自定义采集，复用上报协议）
-import { createReporter, makeH5Transport } from '@qiu_jun/monitor/reporter'
+import { createReporter, makeH5Transport } from '@qiu_jun/monitors/reporter'
 ```
 
 ## 快速接入
 
 ```ts
-import { Monitor } from '@qiu_jun/monitor'
+import { Monitor } from '@qiu_jun/monitors'
 
 const monitor = new Monitor({
   endpoint: 'https://your-host/api/exception/report',
