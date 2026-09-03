@@ -1,63 +1,97 @@
 import type { PaintLog } from '../interface'
 
-export default function onPaint() {
-  if (PerformanceObserver) {
-    let FP: PerformanceEntry | null = null;
-    let FCP: PerformanceEntry | null = null;
-    let FMP: PerformanceEntry | null = null;
-    let LCP: PerformanceEntry | null = null;
+/** 带历史缓冲的 PerformanceObserver（兼容 SDK 晚于首次绘制才启动） */
+function observeBuffered(
+  type: string,
+  callback: (entries: PerformanceEntry[]) => void,
+): PerformanceObserver | null {
+  if (typeof PerformanceObserver === 'undefined')
+    return null
 
-    // 1、监控性能指标 FP（First Paint） 和 FCP（First Contentful Paint）
-    const observerFPAndFCP = new PerformanceObserver(function (entryList) {
-      const perfEntries = entryList.getEntries();
-      for (const perfEntry of perfEntries) {
-        if (perfEntry.name === "first-paint") {
-          FP = perfEntry;
-          console.log("首次像素绘制 时间：", FP?.startTime);
-        } else if (perfEntry.name === "first-contentful-paint") {
-          FCP = perfEntry;
-          console.log("首次内容绘制 时间：", FCP?.startTime);
-          observerFPAndFCP.disconnect(); // 得到 FCP 后，断开观察，不再观察了
-        }
-      }
-    });
-    // 观察 paint 相关性能指标
-    observerFPAndFCP.observe({ entryTypes: ["paint"] });
-
-    // 2、监控性能指标：FMP（First Meaningful Paint）
-    const observerFMP = new PerformanceObserver(entryList => {
-      const perfEntries = entryList.getEntries();
-      FMP = perfEntries[0];
-      console.log("首次有意义元素绘制 时间：", FMP?.startTime);
-      observerFMP.disconnect(); // 断开观察，不再观察了
-    });
-    observerFMP.observe({ entryTypes: ["element"] });
-
-    // 3、创建性能观察者，观察 LCP
-    const observerLCP = new PerformanceObserver(entryList => {
-      const perfEntries = entryList.getEntries();
-      LCP = perfEntries[0];
-      console.log("最大内容绘制 时间：", LCP?.startTime, perfEntries);
-    });
-    // 观察页面中最大内容的绘制
-    observerLCP.observe({ entryTypes: ["largest-contentful-paint"] });
-
-    // 上送性能指标
-    window.addEventListener("load", () => {
-      setTimeout(() => {
-        // 在上报性能指标数据的时候，停止 LCP 的观察。
-        observerLCP.disconnect();
-        const log: PaintLog = {
-          type: "paint",
-          FP: FP?.startTime, // FP
-          FCP: FCP?.startTime, // FCP
-          FMP: FMP?.startTime, // FMP
-          LCP: LCP?.startTime, // LCP
-        };
-        console.log("paint log: ", log);
-        // @ts-ignore
-        this.send(log);
-      }, 3000);
-    });
+  try {
+    const observer = new PerformanceObserver((list) => {
+      callback(list.getEntries())
+    })
+    // type + buffered 可拿到观察前已产生的条目
+    observer.observe({ type, buffered: true } as PerformanceObserverInit)
+    return observer
   }
+  catch (err) {
+    console.warn('[monitor] PerformanceObserver 不支持 type=', type, err)
+    return null
+  }
+}
+
+type PaintHost = { send: (log: PaintLog) => void }
+
+/**
+ * 采集绘制指标 FP/FCP/FMP/LCP。
+ * 若 SDK 在 window.load 之后初始化，仍会延迟上报（含 buffered 历史指标）。
+ */
+export default function onPaint(this: PaintHost) {
+  if (typeof PerformanceObserver === 'undefined') {
+    console.warn('[monitor] 当前环境不支持 PerformanceObserver，跳过 paint 采集')
+    return
+  }
+
+  let FP: PerformanceEntry | null = null
+  let FCP: PerformanceEntry | null = null
+  let FMP: PerformanceEntry | null = null
+  let LCP: PerformanceEntry | null = null
+
+  const observerFPAndFCP = observeBuffered('paint', (entries) => {
+    for (const entry of entries) {
+      if (entry.name === 'first-paint') {
+        FP = entry
+        console.log('[monitor] FP', FP.startTime)
+      }
+      else if (entry.name === 'first-contentful-paint') {
+        FCP = entry
+        console.log('[monitor] FCP', FCP.startTime)
+      }
+    }
+  })
+
+  const observerFMP = observeBuffered('element', (entries) => {
+    if (entries.length > 0) {
+      FMP = entries[0]
+      console.log('[monitor] FMP', FMP.startTime)
+      observerFMP?.disconnect()
+    }
+  })
+
+  // LCP 会多次更新，上报前再 disconnect
+  const observerLCP = observeBuffered('largest-contentful-paint', (entries) => {
+    if (entries.length > 0) {
+      LCP = entries[entries.length - 1]
+      console.log('[monitor] LCP', LCP.startTime)
+    }
+  })
+
+  /** load 后再等一段时间，尽量拿到稳定 LCP 再上报 */
+  const scheduleReport = () => {
+    setTimeout(() => {
+      observerLCP?.disconnect()
+      observerFPAndFCP?.disconnect()
+      observerFMP?.disconnect()
+
+      const log: PaintLog = {
+        type: 'paint',
+        FP: FP?.startTime,
+        FCP: FCP?.startTime,
+        FMP: FMP?.startTime,
+        LCP: LCP?.startTime,
+      }
+      console.log('[monitor] paint 上报', log)
+      this.send(log)
+    }, 3000)
+  }
+
+  if (document.readyState === 'complete') {
+    console.log('[monitor] 页面已 load 完成，延迟补报 paint')
+    scheduleReport()
+    return
+  }
+
+  window.addEventListener('load', scheduleReport)
 }
