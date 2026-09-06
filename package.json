@@ -1,6 +1,6 @@
 {
   "name": "@qiu_jun/monitors",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "前端监控，用于捕获，分析，和报告网站或应用程序中的异常，错误和性能问题的方法",
   "sideEffects": false,
   "main": "dist/index.js",
