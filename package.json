@@ -16,6 +16,10 @@
       "types": "./dist/h5.d.ts",
       "default": "./dist/h5.js"
     },
+    "./miniprogram": {
+      "types": "./dist/miniprogram.d.ts",
+      "default": "./dist/miniprogram.js"
+    },
     "./reporter": {
       "types": "./dist/reporter.d.ts",
       "default": "./dist/reporter.js"
