@@ -1,4 +1,4 @@
-# @qiu_jun/monitor 参数说明
+# @qiu_jun/monitors 参数说明
 
 > **后台对接展示**：Monitor 数据如何通过 exception 模块 `/api/exception/*` 接口查询与展示，见 [backend-integration.md](./backend-integration.md)（含完整 API 清单、字段映射、页面场景对照）。
 
@@ -6,15 +6,16 @@
 
 | 子路径 | 入口文件 | 说明 |
 |---|---|---|
-| `@qiu_jun/monitor` | `dist/index.js` | 主入口：Monitor + reporter 类型 |
-| `@qiu_jun/monitor/h5` | `dist/h5.js` | H5 监控（与主入口等价，按需引入） |
-| `@qiu_jun/monitor/reporter` | `dist/reporter.js` | 仅上报器，无采集逻辑 |
+| `@qiu_jun/monitors` | `dist/index.js` | 主入口：Monitor + reporter 类型 |
+| `@qiu_jun/monitors/h5` | `dist/h5.js` | H5 监控（与主入口等价，按需引入） |
+| `@qiu_jun/monitors/miniprogram` | `dist/miniprogram.js` | 小程序监控（`wx.request` 上报，独立于 H5） |
+| `@qiu_jun/monitors/reporter` | `dist/reporter.js` | 仅上报器，无采集逻辑 |
 
-`package.json` 的 `exports` 与 `@qiu_jun/exception` 对齐：`types` + `default`；主入口额外提供 `import`（CJS）与 `require`（UMD `monitor.umd.js`）。
+`package.json` 的 `exports` 与 `@qiu_jun/exception` 对齐：子路径为 `types` + `default`；主入口额外提供 `import`（ESM `index.js`）与 `require`（UMD `monitor.umd.js`，CDN / script 标签引入）。
 
 ---
 
-## Monitor 初始化参数（`IMonitorOptions`）
+## Monitor 初始化参数（`IMonitorOptions`，H5）
 
 配置 `endpoint` + `projectKey` 后，采集数据走异常平台上报协议（`POST /api/exception/report`）。
 
@@ -56,16 +57,16 @@ Monitor 将采集结果映射为异常平台 `ReportEventDto`，主要字段：
 | `level` | 异常默认 `ERROR`，性能默认 `INFO`，长任务 ≥100ms 为 `WARN` |
 | `message` | 错误摘要或指标描述 |
 | `stack` | JS 堆栈（有则填） |
-| `page` | 当前页 `pathname + search` |
+| `page` | H5 为当前页 `pathname + search`；小程序为页面路由（如 `/pages/index/index`） |
 | `device` | 浏览器、OS、选择器、性能指标等 JSON |
 | `release` / `environment` / `userId` | 来自初始化配置 |
 
 ---
 
-## 示例
+## 示例（H5）
 
 ```ts
-import { Monitor } from '@qiu_jun/monitor'
+import { Monitor } from '@qiu_jun/monitors'
 
 const monitor = new Monitor({
   endpoint: 'https://your-host/api/exception/report',
@@ -75,3 +76,72 @@ const monitor = new Monitor({
   userId: getCurrentUserId(), // 登录后传入，可选
 })
 ```
+
+---
+
+## 小程序监控（`createMiniProgramMonitor`）
+
+微信小程序独立入口（注入了 `wx` 全局的 uni-app 等亦可直接用），采集基于 `wx.onError` / `wx.onUnhandledRejection`，上报基于 `wx.request`。
+
+**必须在业务代码调用 `App()` / `Page()` / `Component()` 之前初始化**——SDK 会包装这三个全局构造函数来拦截生命周期。
+
+```ts
+// app.ts 最顶部
+import { createMiniProgramMonitor } from '@qiu_jun/monitors/miniprogram'
+
+const monitor = createMiniProgramMonitor({
+  endpoint: 'https://your-host/api/exception/report',
+  projectKey: 'your-project-key',
+  userId: getCurrentUserId(), // 可选
+})
+
+App({ /* 业务代码照常写 */ })
+```
+
+### 参数（`MiniProgramMonitorOptions`，继承 `ExcSdkOptions`）
+
+| 参数 | 必填 | 类型 | 说明 |
+|---|---|---|---|
+| `endpoint` | ✅ | `string` | 上报地址，同 H5 |
+| `projectKey` | ✅ | `string` | 同 H5，`X-Project-Key` 鉴权 |
+| `userId` | ❌ | `string` | 用户标识 |
+| `release` | ❌ | `string` | 默认取 `getAccountInfoSync` 的线上版本号 |
+| `environment` | ❌ | `string` | 默认 `envVersion === 'release'` 时为 `production`，否则为 `envVersion` |
+| `sampleRate` | ❌ | `number` | **客户端采样率**（%），默认 `100`；与 H5 不同，小程序在端上采样 |
+| `maxBatch` | ❌ | `number` | 攒批条数阈值，默认 `20` |
+| `flushInterval` | ❌ | `number` | 定时 flush 间隔（ms），默认 `30000` |
+| `wxApi` | ❌ | `WxLike` | 默认取全局 `wx`；支付宝/百度等小程序传适配后的 API 对象 |
+| `interceptLifecycle` | ❌ | `boolean` | 拦截 App/Page/Component 生命周期，默认 `true` |
+| `interceptRequest` | ❌ | `boolean` | 拦截 wx.request 失败请求，默认 `true` |
+
+### 自动采集范围
+
+| 错误来源 | 事件 `type` | 说明 |
+|---|---|---|
+| `wx.onError` | `error` | 全局 JS 异常 |
+| `wx.onUnhandledRejection` | `unhandledrejection` | 未处理的 Promise reject |
+| `App`/`Page`/`Component` 生命周期抛错 | `error` | 带 `lifecycle`（如 `onLoad`）、页面路由、耗时；`async` 生命周期的 reject 也覆盖；与 `wx.onError` 收到的同条错误 5 秒窗口去重，不双报 |
+| `Component` 的 `methods` 抛错 | `error` | 组件方法异常 |
+| `wx.request` 失败（statusCode ≥ 400 或网络失败） | `request` | 带耗时；上报自身的 URL 跳过，防递归 |
+
+### 手动上报与销毁
+
+```ts
+// 自定义事件
+monitor.capture({
+  type: 'custom',
+  level: 'FATAL', // FATAL | ERROR | WARN | INFO
+  message: '支付回调异常',
+  stack: err.stack,
+})
+
+// 还原 App/Page/Component、wx.request、onError 等全部包装并 flush（测试场景用）
+monitor.destroy()
+```
+
+### 上报机制与注意事项
+
+- 事件进缓冲区，攒够 `maxBatch`（20）条或 `flushInterval`（30 秒）到期批量 `POST` JSON，缓冲上限 100 条
+- **切后台自动 flush**（`wx.onAppHide`）；上报失败自动放回缓冲重试，仅 403（key 无效）丢弃
+- **request 合法域名**：`endpoint` 域名需加入小程序后台「开发管理 → 开发设置 → 服务器域名 → request 合法域名」，否则真机上静默失败（开发者工具可勾选「不校验合法域名」调试）
+- 其他小程序平台：传入适配 `wx.request` / `onError` / `onUnhandledRejection` 等接口的 `wxApi` 即可
