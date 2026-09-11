@@ -88,3 +88,5 @@ npm publish
 - 性能类（paint/timing/longTask）→ `exc_perf_event`
 - reporter 源码位于 `src/exception/`，与 exception-sdk 逻辑等价，便于独立发版
 - **后台对接与展示**：[backend-integration.md](./backend-integration.md)（与 exception 模块 `/api/exception/*` 接口一一对照）
+
+# npm login --registry=https://registry.npmjs.org/

@@ -1,6 +1,6 @@
 {
   "name": "@qiu_jun/monitors",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "前端监控，用于捕获，分析，和报告网站或应用程序中的异常，错误和性能问题的方法",
   "sideEffects": false,
   "main": "dist/index.js",
@@ -31,6 +31,7 @@
   "scripts": {
     "preinstall": "npx only-allow pnpm",
     "build": "pnpm run clean && pnpm run compile && pnpm run bundle",
+    "prepublishOnly": "pnpm run build",
     "clean": "rimraf dist",
     "compile": "tsc -p tsconfig.build.json",
     "bundle": "vite build"
