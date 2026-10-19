@@ -122,6 +122,14 @@ function wrapLifecycle(fn: LifecycleCallback, name: string, getContext: () => { 
 /** wrapLifecycle 上报出口（由 createMiniProgramMonitor 注入） */
 let lifecycleErrorHandler: ((info: { type: 'error', message: string, stack?: string, lifecycle: string, duration: number, page: string, component?: string }) => void) | null = null
 
+/** 不上报的消息关键字：小程序提审/平台侧产生的导航失败噪声（如 navigateTo:fail page xxx.html is not found） */
+const IGNORED_MESSAGE_KEYWORDS = ['.html is not found']
+
+/** 命中关键字的消息不上报 */
+function isIgnoredMessage(message: string): boolean {
+  return IGNORED_MESSAGE_KEYWORDS.some(keyword => message.includes(keyword))
+}
+
 /** 短窗口内同消息去重（生命周期包装抛出 + wx.onError 会收到同一条错误） */
 let lastErrorCache = { message: '', time: 0 }
 function isDuplicate(message: string): boolean {
@@ -256,6 +264,9 @@ export function createMiniProgramMonitor(options: MiniProgramMonitorOptions): Mi
   })
 
   const onError = (message: string) => {
+    // 提审等平台侧噪声（如 navigateTo:fail page xxx.html is not found）不上报
+    if (isIgnoredMessage(message))
+      return
     // 生命周期包装已上报过的错误（包装后原样抛出会再进这里），5s 内同消息去重
     if (isDuplicate(message))
       return
@@ -265,9 +276,13 @@ export function createMiniProgramMonitor(options: MiniProgramMonitorOptions): Mi
   const onUnhandledRejection = (res: { reason?: unknown }) => {
     const reason = res.reason
     const err = reason instanceof Error ? reason : undefined
+    const message = err?.message ?? (typeof reason === 'string' ? reason : JSON.stringify(reason))
+    // 平台噪声消息同样过滤
+    if (isIgnoredMessage(message))
+      return
     reporter.capture(withBase({
       type: 'unhandledrejection',
-      message: err?.message ?? (typeof reason === 'string' ? reason : JSON.stringify(reason)),
+      message,
       stack: err?.stack,
     }))
   }

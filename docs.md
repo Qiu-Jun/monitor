@@ -144,4 +144,5 @@ monitor.destroy()
 - 事件进缓冲区，攒够 `maxBatch`（20）条或 `flushInterval`（30 秒）到期批量 `POST` JSON，缓冲上限 100 条
 - **切后台自动 flush**（`wx.onAppHide`）；上报失败自动放回缓冲重试，仅 403（key 无效）丢弃
 - **request 合法域名**：`endpoint` 域名需加入小程序后台「开发管理 → 开发设置 → 服务器域名 → request 合法域名」，否则真机上静默失败（开发者工具可勾选「不校验合法域名」调试）
+- **内置噪声过滤**：消息含 `.html is not found`（小程序提审环境的 `navigateTo:fail page xxx.html is not found`）不上报，覆盖 `wx.onError` 与 `wx.onUnhandledRejection` 两个采集入口
 - 其他小程序平台：传入适配 `wx.request` / `onError` / `onUnhandledRejection` 等接口的 `wxApi` 即可
