@@ -123,7 +123,7 @@ function wrapLifecycle(fn: LifecycleCallback, name: string, getContext: () => { 
 let lifecycleErrorHandler: ((info: { type: 'error', message: string, stack?: string, lifecycle: string, duration: number, page: string, component?: string }) => void) | null = null
 
 /** 不上报的消息关键字：小程序提审/平台侧产生的导航失败噪声（如 navigateTo:fail page xxx.html is not found） */
-const IGNORED_MESSAGE_KEYWORDS = ['.html is not found']
+const IGNORED_MESSAGE_KEYWORDS = ['.html is not found','.html?']
 
 /** 命中关键字的消息不上报 */
 function isIgnoredMessage(message: string): boolean {
