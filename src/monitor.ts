@@ -20,6 +20,8 @@ export default class Monitor {
   reporter: ExcReporter
   private replay: ReplayController | null = null
   private readonly options: IMonitorOptions
+  /** errorDedupeMs 去重状态：errorType|message|filename → 上次放行时间 */
+  private errorSentAt = new Map<string, number>()
   originalXHR: { new(): XMLHttpRequest, prototype: XMLHttpRequest, readonly UNSENT: 0, readonly OPENED: 1, readonly HEADERS_RECEIVED: 2, readonly LOADING: 3, readonly DONE: 4 }
   originalFetch: ((input: RequestInfo | URL, init?: RequestInit) => Promise<Response>) & { (input: RequestInfo | URL, init?: RequestInit): Promise<Response>, (input: string | URL | globalThis.Request, init?: RequestInit): Promise<Response> }
   originalOnerror: OnErrorEventHandler
@@ -89,8 +91,31 @@ export default class Monitor {
     void this.replay.start()
   }
 
+  /** errorDedupeMs 窗口内同类错误（errorType+message+filename 相同）直接丢弃，连回放触发一并跳过；只在放行时刷新时间戳（非滑动窗口），与 minUploadIntervalMs 的节奏一致 */
+  private isDuplicateError(data: MonitorTypeLog): boolean {
+    const dedupeMs = this.options.errorDedupeMs ?? 0
+    if (dedupeMs <= 0 || data.type !== 'error')
+      return false
+    const key = `${data.errorType}|${data.message}|${data.filename ?? ''}`
+    const now = Date.now()
+    const last = this.errorSentAt.get(key)
+    if (last !== undefined && now - last < dedupeMs)
+      return true
+    // key 随错误种类增长，超阈值时清掉窗口外的过期项，防长会话内存增长
+    if (this.errorSentAt.size >= 100) {
+      for (const [k, at] of this.errorSentAt) {
+        if (now - at >= dedupeMs)
+          this.errorSentAt.delete(k)
+      }
+    }
+    this.errorSentAt.set(key, now)
+    return false
+  }
+
   /** 统一上报：转异常平台格式 → reporter 批量 POST；错误触发回放切片上传并回填 device.replayId */
   send(data: MonitorTypeLog) {
+    if (this.isDuplicateError(data))
+      return
     const baseData = getLogBaseData()
     const events = toExcEvents(data, baseData, this.options)
     const replayId = this.replay?.captureIfTriggered(data)
@@ -172,5 +197,6 @@ export default class Monitor {
 
     this.errorQueue = []
     this.requestQueue = []
+    this.errorSentAt.clear()
   }
 }

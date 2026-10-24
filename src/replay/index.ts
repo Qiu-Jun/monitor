@@ -19,9 +19,9 @@ interface RrwebEvent {
 const MAX_SEGMENTS = 2
 
 const DEFAULTS = {
-  bufferSeconds: 60,
+  bufferSeconds: 30,
   maxUploadsPerSession: 10,
-  minUploadIntervalMs: 30_000,
+  minUploadIntervalMs: 30000,
   maxReplayBytes: 2 * 1024 * 1024,
 }
 

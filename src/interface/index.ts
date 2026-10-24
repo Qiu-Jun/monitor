@@ -15,17 +15,19 @@ export interface IMonitorOptions {
   /** XHR 超时阈值 ms，默认 60000（1 分钟） */
   timeoutDuration?: number
   maxQueueSize?: number
+  /** 同类错误采集去重窗口（ms），默认 0 不启用；窗口内 errorType+message+filename 相同的错误只上报一条。建议与 replay.minUploadIntervalMs 同值（如 30000），错误事件与回放 1:1 */
+  errorDedupeMs?: number
   /** 错误回放（仅 Web/H5，小程序无 DOM 不支持），默认关闭 */
   replay?: ReplayOptions
 }
 
-/** 错误回放配置：环形录制最近操作，出错时上传最近 30~60 秒，经独立接口 + device.replayId 关联异常事件 */
+/** 错误回放配置：环形录制最近操作，出错时上传最近 15~30 秒，经独立接口 + device.replayId 关联异常事件 */
 export interface ReplayOptions {
   /** 开启回放，默认 false */
   enabled?: boolean
   /** 会话采样率 0-1，默认 1（命中才录制） */
   sampleRate?: number
-  /** 环形缓冲长度（秒），默认 60（实际覆盖 bufferSeconds/2 ~ bufferSeconds） */
+  /** 环形缓冲长度（秒），默认 30（实际覆盖 bufferSeconds/2 ~ bufferSeconds） */
   bufferSeconds?: number
   /** 单会话回放上传上限，默认 10 */
   maxUploadsPerSession?: number

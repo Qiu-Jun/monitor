@@ -30,6 +30,7 @@
 | `flushInterval` | ❌ | `number` | reporter 定时 flush 间隔（ms），默认 `30000`（30 秒） |
 | `maxQueueSize` | ❌ | `number` | XHR 失败请求队列上限，默认 `10` |
 | `timeoutDuration` | ❌ | `number` | XHR 超时阈值（ms），默认 `60000`（1 分钟） |
+| `errorDedupeMs` | ❌ | `number` | 同类错误（`errorType`+`message`+`filename` 相同）采集去重窗口（ms），窗口内重复直接丢弃，默认 `0` 不启用；建议与 `replay.minUploadIntervalMs` 同值（如 `30000`），错误事件与回放 1:1，并减少上报量 |
 
 **采样率不在客户端配置。** 在后台编辑接入项目的 `sampleRate`（0–100%）即可，服务端收到 batch 后按项目采样率过滤。
 
@@ -87,13 +88,15 @@ const monitor = new Monitor({
 |---|---|---|---|
 | `replay.enabled` | ❌ | `boolean` | 开启回放，默认 `false` |
 | `replay.sampleRate` | ❌ | `number` | 会话采样 0-1，默认 `1`（命中才录制） |
-| `replay.bufferSeconds` | ❌ | `number` | 环形缓冲长度（秒），默认 `60`（实际覆盖 bufferSeconds/2 ~ bufferSeconds） |
+| `replay.bufferSeconds` | ❌ | `number` | 环形缓冲长度（秒），默认 `30`（实际覆盖 bufferSeconds/2 ~ bufferSeconds） |
 | `replay.maxUploadsPerSession` | ❌ | `number` | 单会话上传上限，默认 `10` |
 | `replay.minUploadIntervalMs` | ❌ | `number` | 两次上传最小间隔（ms），默认 `30000` |
 | `replay.maxReplayBytes` | ❌ | `number` | 单条回放解压前体积上限，默认 2MB，超出只保留最新快照段 |
 | `replay.captureRequest` | ❌ | `boolean` | 请求失败是否也触发，默认 `false` |
 | `replay.maskTextClass` | ❌ | `string` | 文本脱敏类名，默认 `'rr-mask'` |
 | `replay.replayEndpoint` | ❌ | `string` | 回放上传地址，默认由 `endpoint` 末尾 `/report` 换成 `/replay` |
+
+与采集去重对齐：`errorDedupeMs` 与 `replay.minUploadIntervalMs` 设为同值（如都 `30000`）后，同一错误在窗口内 1 条事件必带 1 条回放（1:1）——窗口内重复错误在 `Monitor.send()` 入口即被丢弃，不会再触发回放。
 
 隐私默认：输入值全脱敏（`maskAllInputs`），输入框值不会录进回放；`.rr-mask` 脱敏文本、`.rr-block` 整块打码，按需加到业务元素上。
 

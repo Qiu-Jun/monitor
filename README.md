@@ -54,7 +54,7 @@ const monitor = new Monitor({
 
 ## 错误回放（可选，Web/H5）
 
-基于 rrweb 环形录制用户操作，**出错时**上传最近 30~60 秒回放（独立接口），错误事件通过 `device.replayId` 关联，异常平台用 rrweb-player 播放。小程序无 DOM 不支持。
+基于 rrweb 环形录制用户操作，**出错时**上传最近 15~30 秒回放（独立接口），错误事件通过 `device.replayId` 关联，异常平台用 rrweb-player 播放。小程序无 DOM 不支持。
 
 ```ts
 new Monitor({
@@ -62,9 +62,9 @@ new Monitor({
   replay: {
     enabled: true,
     sampleRate: 1,             // 会话采样 0-1，默认 1
-    bufferSeconds: 60,         // 环形缓冲长度，默认 60
+    bufferSeconds: 30,         // 环形缓冲长度，默认 30秒
     maxUploadsPerSession: 10,  // 单会话上传上限，默认 10
-    minUploadIntervalMs: 30_000,
+    minUploadIntervalMs: 30000,
     captureRequest: false,     // 请求失败是否也触发，默认 false
     maskTextClass: 'rr-mask',  // 文本脱敏类名
     // replayEndpoint: '...',  // 默认由 endpoint 末尾 /report 换成 /replay
@@ -73,6 +73,7 @@ new Monitor({
 ```
 
 - 仅 `error` / `unhandledrejection` 触发上传；回放走独立 `POST {endpoint 前缀}/replay`，失败静默不影响错误上报
+- 同类错误采集去重：顶层 `errorDedupeMs`（默认 `0` 不启用）与 `replay.minUploadIntervalMs` 设为同值（如 `30000`）后，同一错误窗口内 1 条事件必带 1 条回放（1:1），顺带减少上报量
 - 隐私默认：输入值全脱敏；敏感文本加 `.rr-mask`、敏感区域加 `.rr-block`
 - 回放上传需服务端支持（契约见 [backend-integration.md](./backend-integration.md) §2.3）；script 标签（UMD）接入需页面提供 rrweb / pako 的 import map，否则回放静默禁用
 
@@ -89,11 +90,11 @@ monitor.capture({
 ## 构建发布
 
 ```bash
-pnpm build   # tsc → dist/*.js + *.d.ts，vite → dist/monitor.umd.js
+pnpm build   # tsc → dist/*.js + *.d.ts，strip-console 剥离 console.*，vite → dist/monitor.umd.js
 npm publish
 ```
 
-产物：
+产物均不含 `console.*`（调试 `console.log` 与降级 `console.warn` 一并剥离；UMD 由 vite terser `drop_console`，其余由 `scripts/strip-console.mjs`）：
 
 | 路径 | 说明 |
 |---|---|
