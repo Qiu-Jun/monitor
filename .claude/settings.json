@@ -18,12 +18,26 @@
       "Read(//d/work/main-server/packages/main-server/src/modules/exception/event/**)",
       "Read(//d/work/main-server/packages/main-server/**)",
       "Bash(pnpm build *)",
-      "Read(//d/work/main-server/packages/main-admin/**)"
+      "Read(//d/work/main-server/packages/main-admin/**)",
+      "Read(//d/work/main-server/packages/main-admin/src/api/**)",
+      "Read(//d/work/main-server/packages/main-admin/src/views/exception/issues/**)",
+      "Read(//d/work/main-server/packages/main-admin/node_modules/rrweb-player/dist//**)",
+      "Bash(node -e \"const p=require\\('/d/work/main-server/packages/main-admin/node_modules/rrweb-player/package.json'\\); console.log\\('version:', p.version, '| main:', p.main, '| module:', p.module, '| types:', p.types\\)\")",
+      "Bash(cat /d/work/main-server/packages/main-admin/node_modules/rrweb-player/package.json | head -30; echo ---; head -60 /d/work/main-server/packages/main-admin/node_modules/rrweb-player/dist/rrweb-player.d.ts)",
+      "Read(//d/work/main-server/packages/main-admin/node_modules/rrweb-player/**)",
+      "Read(//d/work/main-server/packages/main-admin/node_modules/rrweb-player/dist/**)",
+      "Bash(grep -A 25 '\"exports\"' /d/work/main-server/packages/main-admin/node_modules/rrweb-player/package.json)",
+      "Bash(ls /d/work/main-server/packages/main-admin/node_modules/rrweb-player/dist/)",
+      "Bash(pnpm dev *)",
+      "Bash(netstat -ano)",
+      "Bash(tasklist)"
     ],
     "additionalDirectories": [
       "D:\\work\\main-server\\packages\\main-server\\src\\modules\\exception",
       "D:\\work\\main-server\\packages\\main-server\\src\\common\\adapters",
-      "D:\\work\\main-server\\packages\\main-server\\src\\shared\\helper"
+      "D:\\work\\main-server\\packages\\main-server\\src\\shared\\helper",
+      "D:\\work\\main-server\\packages\\main-admin\\src\\api",
+      "D:\\work\\main-server\\packages\\main-admin\\src\\views\\exception\\issues"
     ]
   }
 }
