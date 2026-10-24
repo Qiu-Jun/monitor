@@ -107,7 +107,7 @@ ReportProcessor 按 type 分流
 | `timing` | `DOMContentLoadedTime`, `loadTime` | `loadTime` |
 | `longTask` | `startTime`, `duration`, `selector`, `eventType` | `duration` |
 
-#### §2.3 回放上传 `POST /api/exception/replay`（SDK 已就绪，main-server 待实现）
+#### §2.3 回放上传 `POST /api/exception/replay`（SDK 与 main-server 均已实现）
 
 错误回放（rrweb）走**独立接口**，不进事件批量通道；错误事件通过 `device.replayId` 与回放关联（`device` 为 JSON 直通，`ReportEventDto` 无需改动）。请求 Header 同 `/report`（`X-Project-Key`，免登录），Body：
 
@@ -123,7 +123,9 @@ ReportProcessor 按 type 分流
 
 **服务端解码注意**：pako 3.x 的 `inflate(data, { to: 'string' })` 返回的是 `Uint8Array` 而非字符串（与 2.x 不同）——解码用 `Buffer.from(pako.inflate(Buffer.from(data, 'base64'))).toString('utf8')`，再 `JSON.parse` 得到事件数组；平台侧用 `rrweb-player` 播放。
 
-**存储建议**：独立表（如 `exc_replay`：`id, projectId, replayId, format, codec, size, data, createdAt`），单条建议限 1MB；**TTL 14~30 天定期清理**；不设外键，按 `replayId` 软关联，回放过期由平台显示「已过期」。管理端播放接口建议 `GET /api/exception/replay/:id`（JWT）。
+**存储**（已实现，main-server `src/modules/exception/replay/`）：独立表 `exc_replay`（`replay_id` 唯一、`data` mediumtext、`expires_at` 索引），**TTL 30 天**（`REPLAY_TTL_DAYS`，每日零点定时清理）。**注意 JSON body 上限已放宽到 3MB**（Fastify 默认 1MB 会 413，见 `fastify.adapter.ts`）。
+
+管理端读取接口 `GET /api/exception/replay/:replayId`（**路径参数为 replayId 字符串**，JWT + 复用 `exception:issue:read` 权限）；查不到返回 404，前端显示「已过期」。
 
 SDK 侧配置见 docs.md「错误回放」：仅 `error` / `unhandledrejection` 触发（request 失败可配置），会话采样 + 30s 上传间隔 + 单会话上限三道限流。
 

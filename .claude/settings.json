@@ -30,14 +30,17 @@
       "Bash(ls /d/work/main-server/packages/main-admin/node_modules/rrweb-player/dist/)",
       "Bash(pnpm dev *)",
       "Bash(netstat -ano)",
-      "Bash(tasklist)"
+      "Bash(tasklist)",
+      "Bash(node \"C:/Users/June_Qiu/AppData/Local/Temp/claude/smoke-replay.cjs\")",
+      "Bash(rm \"C:/Users/June_Qiu/AppData/Local/Temp/claude/smoke-replay.cjs\" && echo cleaned)"
     ],
     "additionalDirectories": [
       "D:\\work\\main-server\\packages\\main-server\\src\\modules\\exception",
       "D:\\work\\main-server\\packages\\main-server\\src\\common\\adapters",
       "D:\\work\\main-server\\packages\\main-server\\src\\shared\\helper",
       "D:\\work\\main-server\\packages\\main-admin\\src\\api",
-      "D:\\work\\main-server\\packages\\main-admin\\src\\views\\exception\\issues"
+      "D:\\work\\main-server\\packages\\main-admin\\src\\views\\exception\\issues",
+      "C:\\Users\\June_Qiu\\AppData\\Local\\Temp\\claude"
     ]
   }
 }
