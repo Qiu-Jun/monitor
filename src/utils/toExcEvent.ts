@@ -63,17 +63,6 @@ function mapErrorLog(
     }
   }
 
-  if (log.errorType === 'loadResourceError') {
-    const url = log.filename ?? log.message
-    return {
-      type: 'resource',
-      level: 'ERROR',
-      message: url ? `Resource failed: ${url}` : log.message,
-      ...ctx,
-      device: { ...ctx.device, tagName: log.tagName, selector: log.selector, errorType: log.errorType },
-    }
-  }
-
   return {
     type: 'error',
     level: 'ERROR',

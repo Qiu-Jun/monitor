@@ -22,9 +22,11 @@ export default defineConfig({
       fileName: () => 'monitor.umd.js',
     },
     rollupOptions: {
+      // rrweb / pako 仅回放使用，动态 import 且不打进 UMD；script 标签接入需自行引入两者的 UMD 版本
+      external: [/^rrweb($|\/)/, /^pako($|\/)/],
       output: {
         exports: 'named',
-        globals: {},
+        globals: { rrweb: 'rrweb', pako: 'pako' },
       },
     },
   },

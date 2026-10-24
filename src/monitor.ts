@@ -5,6 +5,7 @@ import { onWindowErr, onLongTask, onPaint, onTiming, onXHR } from './modules'
 import type { IMonitorOptions, MonitorTypeLog, RequestLog } from './interface'
 import { getLogBaseData } from './utils/index'
 import { isExceptionReportUrl, toExcEvents } from './utils/toExcEvent'
+import { ReplayController, deriveReplayEndpoint } from './replay'
 
 export default class Monitor {
   /** 异常平台上报地址 */
@@ -17,6 +18,7 @@ export default class Monitor {
   maxQueueSize: number
   sendTimer: number | null
   reporter: ExcReporter
+  private replay: ReplayController | null = null
   private readonly options: IMonitorOptions
   originalXHR: { new(): XMLHttpRequest, prototype: XMLHttpRequest, readonly UNSENT: 0, readonly OPENED: 1, readonly HEADERS_RECEIVED: 2, readonly LOADING: 3, readonly DONE: 4 }
   originalFetch: ((input: RequestInfo | URL, init?: RequestInit) => Promise<Response>) & { (input: RequestInfo | URL, init?: RequestInit): Promise<Response>, (input: string | URL | globalThis.Request, init?: RequestInit): Promise<Response> }
@@ -46,6 +48,8 @@ export default class Monitor {
 
     this.init()
 
+    this.initReplay()
+
     this.originalXHR = window.XMLHttpRequest
     this.originalFetch = window.fetch
     this.originalOnerror = window.onerror
@@ -59,10 +63,41 @@ export default class Monitor {
     onXHR.call(this)
   }
 
-  /** 统一上报：转异常平台格式 → reporter 批量 POST */
+  /** 回放初始化：显式开启 + 采样命中 + 回放地址可解析 */
+  private initReplay(): void {
+    const replayOptions = this.options.replay
+    if (!replayOptions?.enabled)
+      return
+    const sampleRate = replayOptions.sampleRate ?? 1
+    if (Math.random() >= sampleRate)
+      return
+    const replayEndpoint = replayOptions.replayEndpoint ?? deriveReplayEndpoint(this.endpoint)
+    if (!replayEndpoint) {
+      console.warn('monitor: replay.replayEndpoint 未配置且无法从 endpoint（需以 /report 结尾）推导，回放已禁用')
+      return
+    }
+    this.replay = new ReplayController({
+      replayEndpoint,
+      projectKey: this.projectKey,
+      bufferSeconds: replayOptions.bufferSeconds,
+      maxUploadsPerSession: replayOptions.maxUploadsPerSession,
+      minUploadIntervalMs: replayOptions.minUploadIntervalMs,
+      maxReplayBytes: replayOptions.maxReplayBytes,
+      captureRequest: replayOptions.captureRequest,
+      maskTextClass: replayOptions.maskTextClass,
+    })
+    void this.replay.start()
+  }
+
+  /** 统一上报：转异常平台格式 → reporter 批量 POST；错误触发回放切片上传并回填 device.replayId */
   send(data: MonitorTypeLog) {
     const baseData = getLogBaseData()
     const events = toExcEvents(data, baseData, this.options)
+    const replayId = this.replay?.captureIfTriggered(data)
+    if (replayId) {
+      for (const event of events)
+        event.device = { ...event.device, replayId }
+    }
     for (const event of events)
       this.reporter.capture(event)
   }
@@ -121,6 +156,8 @@ export default class Monitor {
   }
 
   destroy() {
+    this.replay?.stop()
+
     this.sendQueuedData()
     this.reporter.destroy()
 

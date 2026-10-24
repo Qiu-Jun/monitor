@@ -15,6 +15,30 @@ export interface IMonitorOptions {
   /** XHR 超时阈值 ms，默认 60000（1 分钟） */
   timeoutDuration?: number
   maxQueueSize?: number
+  /** 错误回放（仅 Web/H5，小程序无 DOM 不支持），默认关闭 */
+  replay?: ReplayOptions
+}
+
+/** 错误回放配置：环形录制最近操作，出错时上传最近 30~60 秒，经独立接口 + device.replayId 关联异常事件 */
+export interface ReplayOptions {
+  /** 开启回放，默认 false */
+  enabled?: boolean
+  /** 会话采样率 0-1，默认 1（命中才录制） */
+  sampleRate?: number
+  /** 环形缓冲长度（秒），默认 60（实际覆盖 bufferSeconds/2 ~ bufferSeconds） */
+  bufferSeconds?: number
+  /** 单会话回放上传上限，默认 10 */
+  maxUploadsPerSession?: number
+  /** 两次上传最小间隔（ms），默认 30000 */
+  minUploadIntervalMs?: number
+  /** 单条回放解压前体积上限（字节），默认 2MB，超出只保留最新快照段 */
+  maxReplayBytes?: number
+  /** 请求失败是否也触发回放上传，默认 false（仅 error/unhandledrejection 触发） */
+  captureRequest?: boolean
+  /** 文本脱敏类名，默认 'rr-mask'；输入值默认全脱敏（maskAllInputs） */
+  maskTextClass?: string
+  /** 回放上传地址；默认由 endpoint 末尾 /report 换成 /replay，推导不出时必须显式传 */
+  replayEndpoint?: string
 }
 
 
@@ -38,8 +62,8 @@ export interface BaseLog {
 export interface ErrorLog {
   // type 监控类型：error（代码错误）
   type: "error";
-  // 错误类型：jsError（JS 代码错误）、promiseError（Promise 错误）、loadResourceError（加载资源错误）、xhrError（API 请求错误）
-  errorType: "jsError" | "promiseError" | "loadResourceError" | "xhrError";
+  // 错误类型：jsError（JS 代码错误）、promiseError（Promise 错误）、xhrError（API 请求错误）
+  errorType: "jsError" | "promiseError" | "xhrError";
   // 错误信息
   message: string;
   // 错误发生的文件
@@ -52,8 +76,6 @@ export interface ErrorLog {
   selector?: string;
   // 是否白屏
   isWhiteScreen?: boolean;
-  // 资源标签名称
-  tagName?: string;
   // xhr 数据
   xhrData?: {
     eventType: "load" | "error"; // xhr 错误事件类型

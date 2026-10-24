@@ -80,7 +80,7 @@ ReportProcessor 按 type 分流
 |---|---|---|---|
 | `error` | 异常 | JS 运行时错误 | `exc_issue` + `exc_event` |
 | `unhandledrejection` | 异常 | Promise 未捕获 | 同上 |
-| `resource` | 异常 | 静态资源加载失败 | 同上 |
+| `resource` | 异常 | 静态资源加载失败（SDK 已停止采集，仅历史数据） | 同上 |
 | `request` | 异常 | XHR/Fetch 失败 | 同上 |
 | `custom` | 异常 | `monitor.capture()` 手动上报 | 同上 |
 | `paint` | 性能 | FP/FCP/FMP/LCP | `exc_perf_event` |
@@ -96,7 +96,7 @@ ReportProcessor 按 type 分流
 | Monitor 场景 | device 关键字段 |
 |---|---|
 | JS / Promise | `selector`, `filename`, `position`, `errorType`, `isWhiteScreen` |
-| 资源失败 | `tagName`, `selector`, `errorType` |
+| 资源失败（已停止采集） | `tagName`, `selector`, `errorType` |
 | 接口失败 | `durationMs`, `msg` |
 
 **性能指标**（统计 API 用 `JSON_EXTRACT(device, '$.{metric}')` 聚合）：
@@ -106,6 +106,26 @@ ReportProcessor 按 type 分流
 | `paint` | `FP`, `FCP`, `FMP`, `LCP` | `LCP`, `FCP` |
 | `timing` | `DOMContentLoadedTime`, `loadTime` | `loadTime` |
 | `longTask` | `startTime`, `duration`, `selector`, `eventType` | `duration` |
+
+#### §2.3 回放上传 `POST /api/exception/replay`（SDK 已就绪，main-server 待实现）
+
+错误回放（rrweb）走**独立接口**，不进事件批量通道；错误事件通过 `device.replayId` 与回放关联（`device` 为 JSON 直通，`ReportEventDto` 无需改动）。请求 Header 同 `/report`（`X-Project-Key`，免登录），Body：
+
+| 字段 | 必填 | 说明 |
+|---|---|---|
+| `replayId` | ✅ | SDK 生成的 uuid，与错误事件 `device.replayId` 一致（SDK 先生成后上传，无需服务端回传） |
+| `format` | ✅ | 事件流格式版本，当前 `rrweb@2`（播放器按此选择解析方式） |
+| `codec` | ✅ | 编码方式，当前 `deflate-base64` |
+| `size` | ✅ | 解压前 JSON 字节数 |
+| `durationMs` | ✅ | 回放覆盖时长（首末事件时间差 ms） |
+| `occurredAt` | ✅ | ISO8601 |
+| `data` | ✅ | pako `deflate` → base64 的 rrweb 事件 JSON 数组 |
+
+**服务端解码注意**：pako 3.x 的 `inflate(data, { to: 'string' })` 返回的是 `Uint8Array` 而非字符串（与 2.x 不同）——解码用 `Buffer.from(pako.inflate(Buffer.from(data, 'base64'))).toString('utf8')`，再 `JSON.parse` 得到事件数组；平台侧用 `rrweb-player` 播放。
+
+**存储建议**：独立表（如 `exc_replay`：`id, projectId, replayId, format, codec, size, data, createdAt`），单条建议限 1MB；**TTL 14~30 天定期清理**；不设外键，按 `replayId` 软关联，回放过期由平台显示「已过期」。管理端播放接口建议 `GET /api/exception/replay/:id`（JWT）。
+
+SDK 侧配置见 docs.md「错误回放」：仅 `error` / `unhandledrejection` 触发（request 失败可配置），会话采样 + 30s 上传间隔 + 单会话上限三道限流。
 
 ---
 
@@ -177,7 +197,7 @@ Content-Type: application/json
 |---|---|---|
 | JS 错误 | `error` | `Cannot read properties of undefined` |
 | Promise | `unhandledrejection` | 同上 |
-| 资源失败 | `resource` | `Resource failed: https://...` |
+| 资源失败（已停止采集） | `resource` | `Resource failed: https://...` |
 | XHR/Fetch | `request` | `Request failed [500]: GET /api/user` |
 
 **状态流转**：

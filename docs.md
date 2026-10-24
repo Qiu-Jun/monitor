@@ -79,6 +79,30 @@ const monitor = new Monitor({
 
 ---
 
+## 错误回放（可选，仅 Web/H5）
+
+`replay` 开启后 SDK 用 rrweb 持续环形录制（保留最近 `bufferSeconds` 秒），`error` / `unhandledrejection` 触发时把缓冲切片经**独立接口**上传，并在错误事件 `device.replayId` 里带上同一关联 id。小程序无 DOM 不支持。
+
+| 参数 | 必填 | 类型 | 说明 |
+|---|---|---|---|
+| `replay.enabled` | ❌ | `boolean` | 开启回放，默认 `false` |
+| `replay.sampleRate` | ❌ | `number` | 会话采样 0-1，默认 `1`（命中才录制） |
+| `replay.bufferSeconds` | ❌ | `number` | 环形缓冲长度（秒），默认 `60`（实际覆盖 bufferSeconds/2 ~ bufferSeconds） |
+| `replay.maxUploadsPerSession` | ❌ | `number` | 单会话上传上限，默认 `10` |
+| `replay.minUploadIntervalMs` | ❌ | `number` | 两次上传最小间隔（ms），默认 `30000` |
+| `replay.maxReplayBytes` | ❌ | `number` | 单条回放解压前体积上限，默认 2MB，超出只保留最新快照段 |
+| `replay.captureRequest` | ❌ | `boolean` | 请求失败是否也触发，默认 `false` |
+| `replay.maskTextClass` | ❌ | `string` | 文本脱敏类名，默认 `'rr-mask'` |
+| `replay.replayEndpoint` | ❌ | `string` | 回放上传地址，默认由 `endpoint` 末尾 `/report` 换成 `/replay` |
+
+隐私默认：输入值全脱敏（`maskAllInputs`），输入框值不会录进回放；`.rr-mask` 脱敏文本、`.rr-block` 整块打码，按需加到业务元素上。
+
+上报协议与服务端解码方式见 [backend-integration.md](./backend-integration.md) §2.3（pako deflate + base64；服务端 `inflate` 后需按 `Uint8Array` → utf8 处理）。
+
+npm/ESM 接入时 rrweb 与 pako 为依赖自动安装、动态加载（不进主包）；**UMD / script 标签接入**需页面提供 import map 指向两者的 ESM 版本，否则回放静默禁用（错误上报不受影响）。
+
+---
+
 ## 小程序监控（`createMiniProgramMonitor`）
 
 微信小程序独立入口（注入了 `wx` 全局的 uni-app 等亦可直接用），采集基于 `wx.onError` / `wx.onUnhandledRejection`，上报基于 `wx.request`。

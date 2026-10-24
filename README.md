@@ -2,8 +2,6 @@
 
 前端监控 SDK：采集异常 + 性能指标，上报至异常分析平台（main-server `/api/exception/report`）。
 
-内置 reporter（与 main-server `exception-sdk` 协议对齐），**无外部 SDK 依赖**，可独立打包发布 npm。
-
 ## 安装
 
 ```bash
@@ -49,11 +47,34 @@ const monitor = new Monitor({
 |---|---|---|
 | JS 错误 | `error` | 含选择器、白屏检测 |
 | Promise 未捕获 | `unhandledrejection` | |
-| 资源加载失败 | `resource` | img/script/css 等 |
 | XHR 失败/超时 | `request` | message 格式 `Request failed [500]: GET /api/...` |
 | FP/FCP/FMP/LCP | `paint` | 指标在 `device` |
 | DOMContentLoaded/load | `timing` | |
 | 长任务 | `longTask` | duration ≥ 100ms 时 level=WARN |
+
+## 错误回放（可选，Web/H5）
+
+基于 rrweb 环形录制用户操作，**出错时**上传最近 30~60 秒回放（独立接口），错误事件通过 `device.replayId` 关联，异常平台用 rrweb-player 播放。小程序无 DOM 不支持。
+
+```ts
+new Monitor({
+  // ...
+  replay: {
+    enabled: true,
+    sampleRate: 1,             // 会话采样 0-1，默认 1
+    bufferSeconds: 60,         // 环形缓冲长度，默认 60
+    maxUploadsPerSession: 10,  // 单会话上传上限，默认 10
+    minUploadIntervalMs: 30_000,
+    captureRequest: false,     // 请求失败是否也触发，默认 false
+    maskTextClass: 'rr-mask',  // 文本脱敏类名
+    // replayEndpoint: '...',  // 默认由 endpoint 末尾 /report 换成 /replay
+  },
+})
+```
+
+- 仅 `error` / `unhandledrejection` 触发上传；回放走独立 `POST {endpoint 前缀}/replay`，失败静默不影响错误上报
+- 隐私默认：输入值全脱敏；敏感文本加 `.rr-mask`、敏感区域加 `.rr-block`
+- 回放上传需服务端支持（契约见 [backend-integration.md](./backend-integration.md) §2.3）；script 标签（UMD）接入需页面提供 rrweb / pako 的 import map，否则回放静默禁用
 
 ## 手动上报
 

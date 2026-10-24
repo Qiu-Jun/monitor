@@ -5,52 +5,35 @@ export default function onWindowErr() {
     'error',
     event => {
       console.log("error event: ", event);
-      // 监听 JS/CSS 资源文件加载错误
+      // 资源加载失败（target 带 src/href，如 img/script/link）噪声多、价值低，不再上报
       const target = event.target as HTMLScriptElement | HTMLImageElement | HTMLLinkElement | null;
-      let filename;
       if (
         target &&
-        (filename =
-          (target as HTMLScriptElement | HTMLImageElement).src || (target as HTMLLinkElement).href)
+        ((target as HTMLScriptElement | HTMLImageElement).src || (target as HTMLLinkElement).href)
       ) {
-        // 1、数据建模存储
-        const log: ErrorLog = {
-          type: "error",
-          errorType: "loadResourceError", // 错误类型 - JS/CSS 资源加载错误
-          message: `${filename} resource loading fail.`,
-          filename, // 报错的文件
-          tagName: target.tagName, // 资源标签名称
-          // body script
-          selector: getSelector(event.target as HTMLElement),
-        };
-
-        console.log("log: ", log);
-
-        // 2、上报数据
-        // @ts-ignore
-        this.send(log);
-      } else {
-        // 监听 JS 代码执行出错
-        const lastEvent = getLastEvent(); // 监听到错误后，获取到最后一个交互事件
-        const isWhiteScreen = checkWhiteScreen(); // 检查是否白屏
-        // 1.1、数据建模存储
-        const errorLog: ErrorLog = {
-          // kind: "stability", // 监控指标的大类
-          type: "error",
-          errorType: "jsError",
-          message: event.message,
-          filename: event.filename,
-          position: `${event.lineno}:${event.colno}`,
-          stack: formatStack(event.error.stack),
-          selector: lastEvent ? getSelector() : "",
-          isWhiteScreen,
-        };
-        console.log("js error log: ", errorLog);
-
-        // 1.2、上报数据
-        // @ts-ignore
-        this.send(errorLog);
+        return
       }
+
+      // 监听 JS 代码执行出错
+      const lastEvent = getLastEvent(); // 监听到错误后，获取到最后一个交互事件
+      const isWhiteScreen = checkWhiteScreen(); // 检查是否白屏
+      // 1.1、数据建模存储
+      const errorLog: ErrorLog = {
+        // kind: "stability", // 监控指标的大类
+        type: "error",
+        errorType: "jsError",
+        message: event.message,
+        filename: event.filename,
+        position: `${event.lineno}:${event.colno}`,
+        stack: formatStack(event.error.stack),
+        selector: lastEvent ? getSelector() : "",
+        isWhiteScreen,
+      };
+      console.log("js error log: ", errorLog);
+
+      // 1.2、上报数据
+      // @ts-ignore
+      this.send(errorLog);
     },
     true
   )

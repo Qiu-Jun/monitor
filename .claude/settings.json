@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(pnpm add *)",
+      "Bash(node -e \"console.log\\('pako types:', require\\('fs'\\).existsSync\\('node_modules/pako/index.d.ts'\\), '| main:', require\\('./node_modules/pako/package.json'\\).main, '| module:', require\\('./node_modules/pako/package.json'\\).module\\)\")",
+      "Bash(pnpm run *)",
+      "Read(//d/work/monitor/**)",
+      "Bash(node -e \"const p=require\\('./node_modules/rrweb/package.json'\\);console.log\\(p.main, p.module, JSON.stringify\\(p.dependencies\\)\\)\")",
+      "Read(//c/Program Files/Google/Chrome/Application/**)",
+      "Bash(node smoke/server.cjs)",
+      "mcp__rea__capture_browser_scenario",
+      "Bash(node -e ' *)",
+      "Bash(npm view *)",
+      "Bash(curl -s https://cdn.jsdelivr.net/npm/nanoid/index.js)",
+      "Read(//d/work/main-server/packages/main-server/src/modules/exception/**)",
+      "Read(//d/work/main-server/packages/main-server/src/modules/exception/issue/**)",
+      "Read(//d/work/main-server/packages/main-server/src/modules/exception/event/**)",
+      "Read(//d/work/main-server/packages/main-server/**)",
+      "Bash(pnpm build *)",
+      "Read(//d/work/main-server/packages/main-admin/**)"
+    ],
+    "additionalDirectories": [
+      "D:\\work\\main-server\\packages\\main-server\\src\\modules\\exception",
+      "D:\\work\\main-server\\packages\\main-server\\src\\common\\adapters",
+      "D:\\work\\main-server\\packages\\main-server\\src\\shared\\helper"
+    ]
+  }
+}
