@@ -47,10 +47,19 @@ const monitor = new Monitor({
 |---|---|---|
 | JS 错误 | `error` | 含选择器、白屏检测 |
 | Promise 未捕获 | `unhandledrejection` | |
-| XHR 失败/超时 | `request` | message 格式 `Request failed [500]: GET /api/...` |
+| XHR/fetch 失败/超时 | `request` | 网络失败 `[network]`、HTTP `[500]`；业务错误 `[business 1102]`（需配 `isBusinessError`，见下） |
 | FP/FCP/FMP/LCP | `paint` | 指标在 `device` |
 | DOMContentLoaded/load | `timing` | |
 | 长任务 | `longTask` | duration ≥ 100ms 时 level=WARN |
+
+**业务错误拦截**：后端 HTTP 200 但响应体 `code` 非成功（如 `{ code: 1102, message: '无权限访问' }`）默认不会上报，配置判定函数后按 `request` 事件上报（`message` 形如 `Request failed [business 1102]: POST /api/xxx`，`device.msg` 带后端 message、`device.code` 带错误码）：
+
+```ts
+new Monitor({
+  // ...
+  isBusinessError: body => (body as { code?: number })?.code !== 0, // 项目内约定 code !== 0 即业务错误
+})
+```
 
 ## 错误回放（可选，Web/H5）
 

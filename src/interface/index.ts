@@ -17,6 +17,8 @@ export interface IMonitorOptions {
   maxQueueSize?: number
   /** 同类错误采集去重窗口（ms），默认 0 不启用；窗口内 errorType+message+filename 相同的错误只上报一条。建议与 replay.minUploadIntervalMs 同值（如 30000），错误事件与回放 1:1 */
   errorDedupeMs?: number
+  /** 业务错误判定：HTTP 2xx 但响应体 code 非成功的接口（如 { code: 1102, message: '无权限访问' }）返回 true 则上报为 request 事件。入参为解析后的响应体（非 JSON / 解析失败跳过）；XHR responseType 为 blob/arraybuffer 时读不到响应体同样跳过。示例：body => (body as any)?.code !== 0 */
+  isBusinessError?: (body: unknown) => boolean
   /** 错误回放（仅 Web/H5，小程序无 DOM 不支持），默认关闭 */
   replay?: ReplayOptions
 }
@@ -139,6 +141,8 @@ export interface RequestLog {
   status?: number;
   url?: string;
   method?: string;
+  /** 业务错误详情（isBusinessError 判定命中时填充，如 { code: 1102, message: '无权限访问' }） */
+  business?: { code?: number | string, message?: string };
   /** 请求发生时页面地址（captureRequest 自动填充） */
   page?: string;
 }

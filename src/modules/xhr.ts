@@ -1,3 +1,17 @@
+import { detectBusinessError } from '../utils/businessError'
+
+/** 读取 XHR 响应体：responseType 非 text/json 时访问 responseText 会抛 InvalidStateError，读不到返回 undefined */
+function readXhrBody(xhr: XMLHttpRequest): unknown {
+  try {
+    if (xhr.responseType === '' || xhr.responseType === 'text')
+      return xhr.responseText
+    return xhr.responseType === 'json' ? xhr.response : undefined
+  }
+  catch {
+    return undefined
+  }
+}
+
 export default function onXHR() {
    const originalXHR = window.XMLHttpRequest as any
    // @ts-ignore
@@ -64,25 +78,49 @@ export default function onXHR() {
           })
         })
 
-        // xhr.addEventListener('loadend', function () {
-        //   const duration = new Date().getTime() - startTime
-        //   const status = xhr.status
-        //   const success = status >= 200 && status < 300
+        // 请求完成：HTTP >= 400 与业务错误（HTTP 2xx 但响应体 code 非成功）。
+        // error/timeout 后 loadend 也会触发，但那时 status 为 0，走不进下面任一分支，不会重复上报
+        xhr.addEventListener('loadend', function () {
+          const duration = new Date().getTime() - startTime
+          const status = xhr.status
+          const urlStr = String(reqUrl ?? '')
 
-        //   // 对于HTTP错误状态码，也捕获为错误
-        //   if (!success) {
-        //     _this.captureRequest({
-        //       type: 'xhr',
-        //       url: reqUrl,
-        //       method: reqMethod || 'GET',
-        //       msg: `XHR请求失败: 状态码 ${status}`,
-        //       duration,
-        //       status,
-        //       success,
-        //       startTime: new Date().getTime()
-        //     })
-        //   }
-        // })
+          if (_this.endpoint && urlStr === _this.endpoint)
+            return
+
+          // HTTP 层失败（4xx/5xx）
+          if (status >= 400) {
+            _this.captureRequest({
+              type: 'xhr',
+              url: reqUrl,
+              method: reqMethod || 'GET',
+              msg: `XHR请求失败: 状态码 ${status}`,
+              duration,
+              status,
+              success: false,
+              startTime
+            })
+            return
+          }
+
+          // 业务错误：需配置 isBusinessError 才会读响应体判定
+          if (status >= 200 && status < 300 && _this.isBusinessError) {
+            const business = detectBusinessError(readXhrBody(xhr), _this.isBusinessError)
+            if (business) {
+              _this.captureRequest({
+                type: 'xhr',
+                url: reqUrl,
+                method: reqMethod || 'GET',
+                msg: `XHR业务错误: ${business.message ?? urlStr}`,
+                duration,
+                status,
+                success: false,
+                business,
+                startTime
+              })
+            }
+          }
+        })
 
         return originalSend.apply(this, arguments)
       }

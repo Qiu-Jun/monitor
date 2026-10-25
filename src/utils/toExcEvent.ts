@@ -125,7 +125,10 @@ export function mapRequestLog(
   const url = String(req.url ?? '')
   const method = String(req.method ?? 'GET').toUpperCase()
   const status = req.status ?? 0
-  const reason = status === 0 ? 'network' : String(status)
+  // 业务错误用 business + code 作 reason（HTTP 200，靠状态码区分不了具体错误）
+  const reason = req.business
+    ? `business${req.business.code !== undefined ? ` ${req.business.code}` : ''}`
+    : (status === 0 ? 'network' : String(status))
   const ctx = contextFields(base, opts)
 
   return {
@@ -133,7 +136,7 @@ export function mapRequestLog(
     level: 'ERROR',
     message: `Request failed [${reason}]: ${method} ${url}`,
     ...ctx,
-    device: { ...ctx.device, durationMs: req.duration, msg: req.msg },
+    device: { ...ctx.device, durationMs: req.duration, msg: req.msg, code: req.business?.code },
   }
 }
 

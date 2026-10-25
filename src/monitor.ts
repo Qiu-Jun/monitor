@@ -1,7 +1,7 @@
 import { createReporter, makeH5Transport } from './exception'
 import type { ExcReporter } from './exception'
 import type { ExcEventPayload } from './exception/types'
-import { onWindowErr, onLongTask, onPaint, onTiming, onXHR } from './modules'
+import { onWindowErr, onLongTask, onPaint, onTiming, onXHR, onFetch } from './modules'
 import type { IMonitorOptions, MonitorTypeLog, RequestLog } from './interface'
 import { getLogBaseData } from './utils/index'
 import { isExceptionReportUrl, toExcEvents } from './utils/toExcEvent'
@@ -12,6 +12,10 @@ export default class Monitor {
   endpoint: string
   /** 接入项目 projectKey */
   projectKey: string
+  /** 回放上传地址（fetch 拦截排除用，未开启回放为空） */
+  replayEndpoint = ''
+  /** 业务错误判定：HTTP 2xx 但响应体 code 非成功时上报（XHR/fetch/wx.request） */
+  isBusinessError?: (body: unknown) => boolean
   timeoutDuration: number
   errorQueue: RequestLog[]
   requestQueue: RequestLog[]
@@ -30,11 +34,17 @@ export default class Monitor {
     this.options = options
     this.endpoint = options.endpoint
     this.projectKey = options.projectKey
+    this.isBusinessError = options.isBusinessError
     this.timeoutDuration = options.timeoutDuration ?? 60_000
     this.errorQueue = []
     this.requestQueue = []
     this.maxQueueSize = options.maxQueueSize ?? 10
     this.sendTimer = null
+
+    // 先保存原始引用再打补丁，destroy 才能真正还原（fetch 现在也会被劫持）
+    this.originalXHR = window.XMLHttpRequest
+    this.originalFetch = window.fetch
+    this.originalOnerror = window.onerror
 
     this.reporter = createReporter(
       {
@@ -51,10 +61,6 @@ export default class Monitor {
     this.init()
 
     this.initReplay()
-
-    this.originalXHR = window.XMLHttpRequest
-    this.originalFetch = window.fetch
-    this.originalOnerror = window.onerror
   }
 
   init() {
@@ -63,6 +69,7 @@ export default class Monitor {
     onPaint.call(this)
     onTiming.call(this)
     onXHR.call(this)
+    onFetch.call(this)
   }
 
   /** 回放初始化：显式开启 + 采样命中 + 回放地址可解析 */
@@ -78,6 +85,8 @@ export default class Monitor {
       console.warn('monitor: replay.replayEndpoint 未配置且无法从 endpoint（需以 /report 结尾）推导，回放已禁用')
       return
     }
+    // 供 fetch 拦截排除（回放上传失败不进 request 事件）
+    this.replayEndpoint = replayEndpoint
     this.replay = new ReplayController({
       replayEndpoint,
       projectKey: this.projectKey,

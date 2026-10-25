@@ -5,6 +5,7 @@
 import { SDK_VERSION, createReporter } from './exception/reporter'
 import type { ExcReporter } from './exception/reporter'
 import type { ExcEventPayload, ExcSdkOptions, ExcTransport } from './exception/types'
+import { detectBusinessError } from './utils/businessError'
 
 export type { ExcEventPayload, ExcSdkOptions, ExcReporter, ExcTransport }
 export { SDK_VERSION, createReporter }
@@ -67,6 +68,8 @@ export interface MiniProgramMonitorOptions extends ExcSdkOptions {
   interceptLifecycle?: boolean
   /** 拦截 wx.request 上报失败请求（默认 true，上报自身 URL 除外，防递归） */
   interceptRequest?: boolean
+  /** 业务错误判定：statusCode 2xx 但响应体 code 非成功时上报，判定方式同 H5 侧 IMonitorOptions.isBusinessError */
+  isBusinessError?: (body: unknown) => boolean
 }
 
 export interface MiniProgramMonitor {
@@ -195,7 +198,7 @@ function currentPageRoute(): string {
 }
 
 /** 拦截 wx.request：失败的请求按 H5 侧 request 事件格式上报（上报自身 URL 除外，防递归） */
-function interceptRequest(wxApi: WxLike, endpoint: string, capture: (event: ExcEventPayload) => void) {
+function interceptRequest(wxApi: WxLike, endpoint: string, isBusinessError: ((body: unknown) => boolean) | undefined, capture: (event: ExcEventPayload) => void) {
   const original = wxApi.request.bind(wxApi)
   ;(wxApi as any).request = (options: any) => {
     const url = String(options?.url ?? '')
@@ -212,6 +215,17 @@ function interceptRequest(wxApi: WxLike, endpoint: string, capture: (event: ExcE
             message: `Request failed [${res.statusCode}]: ${String(options?.method ?? 'GET').toUpperCase()} ${url}`,
             device: { durationMs: Date.now() - start },
           })
+        }
+        else if (isBusinessError) {
+          // 业务错误：statusCode 2xx 但响应体 code 非成功（res.data 默认已被 wx 按 JSON 解析）
+          const business = detectBusinessError(res.data, isBusinessError)
+          if (business) {
+            capture({
+              type: 'request',
+              message: `Request failed [business${business.code !== undefined ? ` ${business.code}` : ''}]: ${String(options?.method ?? 'GET').toUpperCase()} ${url}`,
+              device: { durationMs: Date.now() - start, msg: business.message, code: business.code },
+            })
+          }
         }
         options?.success?.(res)
       },
@@ -305,7 +319,7 @@ export function createMiniProgramMonitor(options: MiniProgramMonitorOptions): Mi
   const restoreConstructors
     = options.interceptLifecycle !== false ? interceptConstructors() : null
   const restoreRequest
-    = options.interceptRequest !== false ? interceptRequest(wxApi, options.endpoint, doCapture) : null
+    = options.interceptRequest !== false ? interceptRequest(wxApi, options.endpoint, options.isBusinessError, doCapture) : null
 
   return {
     reporter,
