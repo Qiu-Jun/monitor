@@ -9,7 +9,10 @@ export interface ExcSdkOptions {
   projectKey: string
   release?: string
   environment?: string
+  /** 低级别事件（WARN/INFO，性能类等）采样率（%），0-100，默认 100 全量 */
   sampleRate?: number
+  /** 错误事件（ERROR/FATAL）采样率（%），0-100，默认 100 全量；不随 sampleRate 联动，需压错误量时显式调低 */
+  errorSampleRate?: number
   maxBatch?: number
   flushInterval?: number
 }

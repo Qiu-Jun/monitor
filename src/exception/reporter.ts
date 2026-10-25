@@ -17,15 +17,17 @@ export class ExcReporter {
     private readonly transport: ExcTransport,
   ) {}
 
-  /** 采样 + 入缓冲 */
+  /** 采样 + 入缓冲：ERROR/FATAL 走 errorSampleRate（默认全量），WARN 及以下走 sampleRate */
   capture(event: ExcEventPayload): void {
-    const sampleRate = this.options.sampleRate ?? 100
+    const level = event.level ?? 'ERROR'
+    const isErrorLevel = level === 'ERROR' || level === 'FATAL'
+    const sampleRate = (isErrorLevel ? this.options.errorSampleRate : this.options.sampleRate) ?? 100
     if (sampleRate < 100 && Math.random() * 100 >= sampleRate)
       return
 
     this.buffer.push({
       ...event,
-      level: event.level ?? 'ERROR',
+      level,
       occurredAt: event.occurredAt ?? new Date().toISOString(),
       sdkVersion: event.sdkVersion ?? SDK_VERSION,
     })

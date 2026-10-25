@@ -31,6 +31,7 @@
 | `maxQueueSize` | ❌ | `number` | XHR 失败请求队列上限，默认 `10` |
 | `timeoutDuration` | ❌ | `number` | XHR 超时阈值（ms），默认 `60000`（1 分钟） |
 | `errorDedupeMs` | ❌ | `number` | 同类错误（`errorType`+`message`+`filename` 相同）采集去重窗口（ms），窗口内重复直接丢弃，默认 `0` 不启用；建议与 `replay.minUploadIntervalMs` 同值（如 `30000`），错误事件与回放 1:1，并减少上报量 |
+| `isBusinessError` | ❌ | `(body: unknown) => boolean` | 业务错误判定：HTTP 2xx 但响应体 code 非成功（如 `{ code: 1102, message: '无权限访问' }`）返回 `true` 则上报为 `request` 事件。入参为解析后的响应体（XHR `responseText` / fetch `clone().text()` / wx.request `res.data`），非 JSON 文本、解析失败自动跳过；XHR `responseType` 为 `blob`/`arraybuffer`、fetch 响应 `content-type` 非 `json`/`text` 时读不到响应体同样跳过。上报 `message` 形如 `Request failed [business 1102]: POST /api/xxx`（`device.code` 为错误码、`device.msg` 为后端 message）。示例：`body => (body as { code?: number })?.code !== 0` |
 
 **采样率不在客户端配置。** 在后台编辑接入项目的 `sampleRate`（0–100%）即可，服务端收到 batch 后按项目采样率过滤。
 
@@ -134,12 +135,14 @@ App({ /* 业务代码照常写 */ })
 | `userId` | ❌ | `string` | 用户标识 |
 | `release` | ❌ | `string` | 默认取 `getAccountInfoSync` 的线上版本号 |
 | `environment` | ❌ | `string` | 默认 `envVersion === 'release'` 时为 `production`，否则为 `envVersion` |
-| `sampleRate` | ❌ | `number` | **客户端采样率**（%），默认 `100`；与 H5 不同，小程序在端上采样 |
+| `sampleRate` | ❌ | `number` | **客户端采样率**（%），默认 `100`；只作用于 WARN/INFO 级事件（性能类、低级别自定义事件），错误类见 `errorSampleRate` |
+| `errorSampleRate` | ❌ | `number` | 错误事件（ERROR/FATAL）采样率（%），默认 `100` 全量，**不随 `sampleRate` 联动**——低 `sampleRate` 下错误仍全量上报；需压缩错误量时显式调低 |
 | `maxBatch` | ❌ | `number` | 攒批条数阈值，默认 `20` |
 | `flushInterval` | ❌ | `number` | 定时 flush 间隔（ms），默认 `30000` |
 | `wxApi` | ❌ | `WxLike` | 默认取全局 `wx`；支付宝/百度等小程序传适配后的 API 对象 |
 | `interceptLifecycle` | ❌ | `boolean` | 拦截 App/Page/Component 生命周期，默认 `true` |
 | `interceptRequest` | ❌ | `boolean` | 拦截 wx.request 失败请求，默认 `true` |
+| `isBusinessError` | ❌ | `(body: unknown) => boolean` | 业务错误判定：statusCode 2xx 但响应体 code 非成功时上报，判定方式与限制同 H5 侧 `IMonitorOptions.isBusinessError`（`res.data` 默认已被 wx 按 JSON 解析，字符串也会自动解析） |
 
 ### 自动采集范围
 
@@ -150,6 +153,7 @@ App({ /* 业务代码照常写 */ })
 | `App`/`Page`/`Component` 生命周期抛错 | `error` | 带 `lifecycle`（如 `onLoad`）、页面路由、耗时；`async` 生命周期的 reject 也覆盖；与 `wx.onError` 收到的同条错误 5 秒窗口去重，不双报 |
 | `Component` 的 `methods` 抛错 | `error` | 组件方法异常 |
 | `wx.request` 失败（statusCode ≥ 400 或网络失败） | `request` | 带耗时；上报自身的 URL 跳过，防递归 |
+| `wx.request` 业务错误（statusCode 2xx 但响应体 code 非成功） | `request` | 需配 `isBusinessError`，`message` 形如 `Request failed [business 1102]: GET /api/xxx`，`device.code`/`device.msg` 带错误码与后端 message |
 
 ### 手动上报与销毁
 
@@ -168,6 +172,7 @@ monitor.destroy()
 
 ### 上报机制与注意事项
 
+- 采样按级别分两档：`sampleRate` 管 WARN/INFO（性能类、低级别自定义事件），`errorSampleRate` 管 ERROR/FATAL（默认 `100` 全量）。只调低 `sampleRate` 不会丢错误；连错误也要采样时才调低 `errorSampleRate`
 - 事件进缓冲区，攒够 `maxBatch`（20）条或 `flushInterval`（30 秒）到期批量 `POST` JSON，缓冲上限 100 条
 - **切后台自动 flush**（`wx.onAppHide`）；上报失败自动放回缓冲重试，仅 403（key 无效）丢弃
 - **request 合法域名**：`endpoint` 域名需加入小程序后台「开发管理 → 开发设置 → 服务器域名 → request 合法域名」，否则真机上静默失败（开发者工具可勾选「不校验合法域名」调试）
